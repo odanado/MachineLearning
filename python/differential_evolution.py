@@ -65,13 +65,13 @@ class PolynomialApproximate:
                 j = randint(0, len(ws[0]))
                 v = ws[pos[0]] + self.scaling * (ws[pos[1]] - ws[pos[2]])
                 new_w = np.zeros(len(ws[0]))
+                r = rand(len(ws[0]))
 
-                for k in range(len(ws[0])):
-                    if k == 0 or rand() < self.CR:
-                        new_w[j] = v[j]
-                    else:
-                        new_w[j] = ws[i][j]
-                    j = (j + 1) % len(ws[0])
+                cond = np.logical_or(r < self.CR, np.arange(len(ws[0])) < 1)
+
+                cond = np.roll(cond, -j)
+                new_w[cond] = v[cond]
+                new_w[~cond] = ws[i][~cond]
 
                 if self.func(new_w) < self.func(ws[i]):
                     ws[i] = new_w
