@@ -77,13 +77,19 @@ class PolynomialApproximateDiff {
     }
 };
 
-int main() {
-    PolynomialApproximateDiff pad(20);
+int main(int argc,char *argv[]) {
+    if (argc != 3) {
+        return 1;
+    }
+    int pointCount = atoi(argv[1]);
+    int degree = atoi(argv[2]);
+
+    PolynomialApproximateDiff pad(pointCount);
     SteepestDescent sd(pad);
-    VectorXd w = VectorXd::Zero(9);
+    VectorXd w = VectorXd::Zero(degree);
     w = sd.run(chrono::seconds(10), w);
 
-    fprintf(stderr, "error = %f\n", pad.error(w));
+    fprintf(stderr, "%f\n", pad.error(w));
 
     for (int i = 0; i < pad.x.rows(); i++) {
         printf("%f %f %f\n", pad.x(i), pad.y(i), pad.eval(w)(i));

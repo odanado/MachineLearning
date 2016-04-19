@@ -143,17 +143,23 @@ class PolynomialApproximate {
     }
 };
 
-int main() {
-    PolynomialApproximate pa(20);
+int main(int argc,char *argv[]) {
+    if (argc != 3) {
+        return 1;
+    }
+    int pointCount = atoi(argv[1]);
+    int degree = atoi(argv[2]);
+
+    PolynomialApproximate pa(pointCount);
 
     DifferentialEvolution de(pa);
-    auto ws = de.run(chrono::seconds(10), 9, 50);
+    auto ws = de.run(chrono::seconds(10), degree, 50);
 
     VectorXd w = ws.row(0);
     for (int i = 0; i < ws.rows(); i++) {
         if (pa(ws.row(i)) < pa(w)) w = ws.row(i);
     }
-    fprintf(stderr, "error = %f\n", pa(w));
+    fprintf(stderr, "%f\n", pa(w));
 
     for (int i = 0; i < pa.x.rows(); i++) {
         printf("%f %f %f\n", pa.x(i), pa.y(i), pa.eval(w)(i));
