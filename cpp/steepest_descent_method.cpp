@@ -4,132 +4,77 @@
 #include <cmath>
 #include <vector>
 
-using Vector = std::vector<double>;
+#include "Eigen/Core"
 
-double func(const Vector &x) {
-    return x[0] * x[0] - 2 * x[0] + 4 * x[1] * x[1];
-}
+using namespace std;
+using namespace Eigen;
 
-/*
-Vector dfunc(const Vector &x) {
-    Vector v(x.size());
-    v[0] = 2 * x[0] - 2;
-    v[1] = 8 * x[1];
-    return v;
-}
-*/
+class SteepestDescent {
+ public:
+    using DFunc = function<VectorXd(const VectorXd &)>;
 
-Vector add(const Vector &v1, const Vector &v2) {
-    Vector res(v1.size());
-    for (int i = 0; i < res.size(); i++) {
-        res[i] = v1[i] + v2[i];
-    }
-    return res;
-}
+    SteepestDescent(const DFunc &dfunc, double alpha = 0.01)
+        : dfunc(dfunc), alpha(alpha) {}
 
-Vector minus(const Vector &v) {
-    Vector res(v.size());
-    for (int i = 0; i < res.size(); i++) {
-        res[i] = -v[i];
-    }
-    return res;
-}
-
-Vector mul(double d, const Vector &v) {
-    Vector res(v.size());
-    for (int i = 0; i < res.size(); i++) {
-        res[i] = d * v[i];
-    }
-    return res;
-}
-
-double norm(const Vector &v) {
-    double res = 0.0;
-    for (auto &&var : v) {
-        res += var * var;
-    }
-    return res;
-}
-
-void print(const Vector &v) {
-    for (auto &&var : v) {
-        std::cout << var << " ";
-    }
-    std::cout << std::endl;
-}
-
-struct Dfunc {
-    Vector x, y;
-    Dfunc(int n) {
-        for (int i = 0; i <= 20; i++) {
-            x.push_back(2.0 * i / n);
-            y.push_back(sin(M_PI * x.back()));
+    VectorXd run(int iteration, const VectorXd &initVec) {
+        VectorXd x = initVec;
+        while (iteration--) {
+            VectorXd new_x = x - alpha * dfunc(x);
+            x = new_x;
         }
+        return x;
     }
 
-    Vector operator()(const Vector &w) {
-        Vector v(w.size());
-        for (int i = 0; i < v.size(); i++) {
-            v[i] = df(i, w);
+ private:
+    DFunc dfunc;
+    double alpha;
+};
+
+class PolynomialApproximateDiff {
+ public:
+    VectorXd y, x;
+    PolynomialApproximateDiff(int n) {
+        x = VectorXd(n);
+        for (int i = 0; i < n; i++) {
+            x(i) = 1.0 * i / (n - 1);
         }
-        return v;
+        y = 2 * M_PI * x;
+        y = y.array().sin();
     }
 
-    double df(int k, const Vector &w) {
-        double d = 0.0;
-        for (int i = 0; i < x.size(); i++) {
-            d += diff(i, w) * pow(x[i], k);
-        }
-        return -2.0 * d;
-    }
-
-    double eval(double x, const Vector &w) {
-        double e = 0.0;
-        for (int i = 0; i < w.size(); i++) {
-            e += w[i] * pow(x, i);
+    VectorXd eval(const VectorXd &w) {
+        VectorXd e = VectorXd::Zero(y.rows());
+        for (int i = 0; i < w.rows(); i++) {
+            e += VectorXd(w(i) * x.array().pow(i));
         }
         return e;
     }
 
-    double diff(int i, const Vector &w) { return y[i] - eval(x[i], w); }
-    void check(const Vector &w) {
-        for (int i = 0; i < y.size(); i++) {
-            std::cout << y[i] << ": " << eval(x[i], w) << std::endl;
+    VectorXd operator()(const VectorXd &w) {
+        VectorXd res = VectorXd::Zero(w.rows());
+        VectorXd d = y - eval(w);
+        for (int i = 0; i < res.rows(); i++) {
+            res(i) = -2.0 * (d.array() * x.array().pow(i)).sum();
         }
+        return res;
     }
-    void print_py(const Vector &w) {
-        for (int i = 0; i < x.size(); i++) {
-            std::cout << eval(x[i], w) << ", ";
-        }
-        std::cout<<std::endl;
+
+    double error(const VectorXd &w) {
+        return (y - eval(w)).array().pow(2).sum();
     }
 };
 
-void print_py(const Vector &v) {
-    for (auto &&var : v) {
-        std::cout << var << ", ";
-    }
-    std::cout << std::endl;
-}
-
 int main() {
-    double alpha = 0.01;
-    Vector x(20, 0);
-    Dfunc dfunc(x.size());
+    PolynomialApproximateDiff pad(20);
+    SteepestDescent sd(pad);
+    VectorXd w = VectorXd::Zero(9);
+    w = sd.run(1000000, w);
 
-    int n;
-    std::cin>>n;
-    for (int i = 0; i < n; i++) {
-        auto d = minus(dfunc(x));
-        auto new_x = add(x, mul(alpha, d));
-        // print(new_x);
-        //std::cout << norm(d) << std::endl;
-        x = new_x;
+    fprintf(stderr, "error = %f\n", pad.error(w));
+
+    for (int i = 0; i < pad.x.rows(); i++) {
+        printf("%f %f %f\n", pad.x(i), pad.y(i), pad.eval(w)(i));
     }
-    print_py(dfunc.x);
-    print_py(dfunc.y);
-    print_py(x);
-    dfunc.check(x);
-    dfunc.print_py(x);
+
     return 0;
 }
