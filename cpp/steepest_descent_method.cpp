@@ -3,6 +3,8 @@
 #include <random>
 #include <cmath>
 #include <vector>
+#include <chrono>
+
 
 #include "Eigen/Core"
 
@@ -19,6 +21,17 @@ class SteepestDescent {
     VectorXd run(int iteration, const VectorXd &initVec) {
         VectorXd x = initVec;
         while (iteration--) {
+            VectorXd new_x = x - alpha * dfunc(x);
+            x = new_x;
+        }
+        return x;
+    }
+
+    VectorXd run(const chrono::seconds &sec, const VectorXd &initVec) {
+        VectorXd x = initVec;
+        auto start = std::chrono::system_clock::now();
+
+        while (std::chrono::system_clock::now() - start < sec) {
             VectorXd new_x = x - alpha * dfunc(x);
             x = new_x;
         }
@@ -68,7 +81,7 @@ int main() {
     PolynomialApproximateDiff pad(20);
     SteepestDescent sd(pad);
     VectorXd w = VectorXd::Zero(9);
-    w = sd.run(1000000, w);
+    w = sd.run(chrono::seconds(10), w);
 
     fprintf(stderr, "error = %f\n", pad.error(w));
 
