@@ -2,6 +2,7 @@
 #include <random>
 #include <array>
 #include <functional>
+#include <chrono>
 
 #include "Eigen/Core"
 
@@ -18,38 +19,22 @@ class DifferentialEvolution {
 
     // 変数の数，解集団の数
     MatrixXd run(int iteration, int n, int m) {
-        // 解集団
-        auto population = randomMatrix(-1.0, 1.0, m, n);
-        uniform_int_distribution<> distInt(0, population.cols() - 1);
-        uniform_real_distribution<> dist(0, 1.0);
+        init(n, m);
 
         while (iteration--) {
-            for (int i = 0; i < population.rows(); i++) {
-                const auto &x = population.row(i);
-                auto pos = selectRandomly(i, population.rows());
-                int j = distInt(rand);
-                VectorXd new_x = VectorXd(population.cols());
+            trial(population, distInt, dist);
+        }
 
-                // Mutation
-                VectorXd v =
-                    population.row(pos[0]) +
-                    scaling * (population.row(pos[1]) - population.row(pos[2]));
+        return population;
+    }
 
-                // Crossover
-                for (int k = 0; k < population.cols(); k++) {
-                    if (k == 0 || CR < dist(rand)) {
-                        new_x(j) = v(j);
-                    } else {
-                        new_x(j) = x(j);
-                    }
-                    j = (j + 1) % population.cols();
-                }
+    // 変数の数，解集団の数
+    MatrixXd run(const chrono::seconds &sec, int n, int m) {
+        init(n, m);
+        auto start = std::chrono::system_clock::now();
 
-                // Selection
-                if (func(new_x) < func(x)) {
-                    population.row(i) = new_x;
-                }
-            }
+        while (std::chrono::system_clock::now() - start < sec) {
+            trial(population, distInt, dist);
         }
 
         return population;
@@ -58,6 +43,42 @@ class DifferentialEvolution {
     void setSeed(int seed) { rand.seed(seed); }
 
  private:
+    void trial(MatrixXd &population, uniform_int_distribution<> &distInt,
+               uniform_real_distribution<> &dist) {
+        for (int i = 0; i < population.rows(); i++) {
+            const auto &x = population.row(i);
+            auto pos = selectRandomly(i, population.rows());
+            int j = distInt(rand);
+            VectorXd new_x = VectorXd(population.cols());
+
+            // Mutation
+            VectorXd v =
+                population.row(pos[0]) +
+                scaling * (population.row(pos[1]) - population.row(pos[2]));
+
+            // Crossover
+            for (int k = 0; k < population.cols(); k++) {
+                if (k == 0 || CR < dist(rand)) {
+                    new_x(j) = v(j);
+                } else {
+                    new_x(j) = x(j);
+                }
+                j = (j + 1) % population.cols();
+            }
+
+            // Selection
+            if (func(new_x) < func(x)) {
+                population.row(i) = new_x;
+            }
+        }
+    }
+
+    void init(int n, int m) {
+        population = randomMatrix(-1.0, 1.0, m, n);
+        distInt = uniform_int_distribution<>(0, population.cols() - 1);
+        dist = uniform_real_distribution<>(0, 1.0);
+    }
+
     array<int, 3> selectRandomly(int i, int n) {
         array<int, 3> pos;
         pos.fill(-1);
@@ -89,6 +110,12 @@ class DifferentialEvolution {
     double scaling;
 
     mt19937 rand;
+
+    // 解集団
+    MatrixXd population;
+    // 一様乱数生成
+    uniform_int_distribution<> distInt;
+    uniform_real_distribution<> dist;
 };
 
 class PolynomialApproximate {
@@ -120,7 +147,7 @@ int main() {
     PolynomialApproximate pa(20);
 
     DifferentialEvolution de(pa);
-    auto ws = de.run(10000, 9, 50);
+    auto ws = de.run(chrono::seconds(10), 9, 50);
 
     VectorXd w = ws.row(0);
     for (int i = 0; i < ws.rows(); i++) {
@@ -132,4 +159,3 @@ int main() {
         printf("%f %f %f\n", pa.x(i), pa.y(i), pa.eval(w)(i));
     }
 }
-
