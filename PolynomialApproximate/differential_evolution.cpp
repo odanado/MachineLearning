@@ -5,13 +5,14 @@
 #include <chrono>
 
 #include "Eigen/Core"
+#include "polynomial_approximate.hpp"
 
 using namespace std;
 using namespace Eigen;
 
+template<class Func>
 class DifferentialEvolution {
  public:
-    using Func = function<double(const VectorXd &)>;
 
     DifferentialEvolution(const Func &func, double CR = 0.5,
                           double scaling = 0.6)
@@ -118,33 +119,9 @@ class DifferentialEvolution {
     uniform_real_distribution<> dist;
 };
 
-class PolynomialApproximate {
- public:
-    VectorXd y, x;
-    PolynomialApproximate(int n) {
-        x = VectorXd(n);
-        for (int i = 0; i < n; i++) {
-            x(i) = 1.0 * i / (n - 1);
-        }
-        y = 2 * M_PI * x;
-        y = y.array().sin();
-    }
-
-    VectorXd eval(const VectorXd &w) {
-        VectorXd e = VectorXd::Zero(y.rows());
-        for (int i = 0; i < w.rows(); i++) {
-            e += VectorXd(w(i) * x.array().pow(i));
-        }
-        return e;
-    }
-
-    double operator()(const VectorXd &w) {
-        return (y - eval(w)).array().pow(2).sum();
-    }
-};
-
 int main(int argc,char *argv[]) {
     if (argc != 3) {
+        fprintf(stderr, "点の数 次数\n");
         return 1;
     }
     int pointCount = atoi(argv[1]);
@@ -152,7 +129,7 @@ int main(int argc,char *argv[]) {
 
     PolynomialApproximate pa(pointCount);
 
-    DifferentialEvolution de(pa);
+    DifferentialEvolution<PolynomialApproximate> de(pa);
     auto ws = de.run(chrono::seconds(10), degree, 50);
 
     VectorXd w = ws.row(0);
@@ -161,7 +138,11 @@ int main(int argc,char *argv[]) {
     }
     fprintf(stderr, "%f\n", pa(w));
 
-    for (int i = 0; i < pa.x.rows(); i++) {
-        printf("%f %f %f\n", pa.x(i), pa.y(i), pa.eval(w)(i));
+    auto y = pa.getY();
+    auto x = pa.getX();
+
+    for (int i = 0; i < x.rows(); i++) {
+        printf("%f %f %f\n", x(i), y(i), pa.eval(w)(i));
     }
 }
+
