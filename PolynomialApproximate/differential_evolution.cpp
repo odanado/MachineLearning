@@ -136,7 +136,7 @@ int main(int argc,char *argv[]) {
     for (int i = 0; i < ws.rows(); i++) {
         if (pa(ws.row(i)) < pa(w)) w = ws.row(i);
     }
-    fprintf(stderr, "%f\n", pa(w));
+    fprintf(stderr, "%d %d %f\n", pointCount, degree, pa(w));
 
     auto y = pa.getY();
     auto x = pa.getX();
