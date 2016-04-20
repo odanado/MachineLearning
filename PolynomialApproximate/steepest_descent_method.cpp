@@ -55,7 +55,7 @@ int main(int argc,char *argv[]) {
     VectorXd w = VectorXd::Zero(degree);
     w = sd.run(chrono::seconds(10), w);
 
-    fprintf(stderr, "%d %d %f\n", pointCount, degree, pa.error(w));
+    fprintf(stderr, "%d %d %f\n", pointCount, degree, pa.error(w, pointCount));
 
     auto y = pa.getY();
     auto x = pa.getX();
