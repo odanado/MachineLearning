@@ -70,8 +70,7 @@ class PolynomialApproximate:
                 cond = np.logical_or(r < self.CR, np.arange(len(ws[0])) < 1)
 
                 cond = np.roll(cond, -j)
-                new_w[cond] = v[cond]
-                new_w[~cond] = ws[i][~cond]
+                new_w = np.where(cond, v, ws[i])
 
                 if self.func(new_w) < self.func(ws[i]):
                     ws[i] = new_w
