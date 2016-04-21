@@ -21,7 +21,7 @@ class SteepestDescent {
     VectorXd run(int iteration, const VectorXd &initVec) {
         VectorXd x = initVec;
         while (iteration--) {
-            VectorXd new_x = x - alpha * func.diff(x);
+            VectorXd new_x = x - alpha * func.diff(x) / x.rows();
             x = new_x;
         }
         return x;
@@ -48,7 +48,7 @@ int main(int argc,char *argv[]) {
         return 1;
     }
     int pointCount = atoi(argv[1]);
-    int degree = atoi(argv[2]);
+    int degree = atoi(argv[2]) + 1;
 
     PolynomialApproximate pa(pointCount);
     SteepestDescent<PolynomialApproximate> sd(pa);

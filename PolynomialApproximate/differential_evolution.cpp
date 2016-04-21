@@ -125,7 +125,7 @@ int main(int argc,char *argv[]) {
         return 1;
     }
     int pointCount = atoi(argv[1]);
-    int degree = atoi(argv[2]);
+    int degree = atoi(argv[2]) + 1;
 
     PolynomialApproximate pa(pointCount);
 
