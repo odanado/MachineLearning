@@ -11,18 +11,16 @@
 using namespace std;
 using namespace Eigen;
 
-template<class Func>
+template <class Func>
 class SteepestDescent {
  public:
-
     SteepestDescent(const Func &func, double alpha = 0.01)
         : func(func), alpha(alpha) {}
 
     VectorXd run(int iteration, const VectorXd &initVec) {
         VectorXd x = initVec;
         while (iteration--) {
-            VectorXd new_x = x - alpha * func.diff(x) / x.rows();
-            x = new_x;
+            trial(x);
         }
         return x;
     }
@@ -32,18 +30,22 @@ class SteepestDescent {
         auto start = std::chrono::system_clock::now();
 
         while (std::chrono::system_clock::now() - start < sec) {
-            VectorXd new_x = x - alpha * func.diff(x);
-            x = new_x;
+            trial(x);
         }
         return x;
     }
 
  private:
+    void trial(VectorXd &x) {
+        VectorXd new_x = x - alpha * func.diff(x) / x.rows();
+        x = new_x;
+    }
+
     Func func;
     double alpha;
 };
 
-int main(int argc,char *argv[]) {
+int main(int argc, char *argv[]) {
     if (argc != 3) {
         return 1;
     }
@@ -66,4 +68,3 @@ int main(int argc,char *argv[]) {
 
     return 0;
 }
-
