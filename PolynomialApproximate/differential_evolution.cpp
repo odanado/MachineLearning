@@ -12,11 +12,9 @@
 using namespace std;
 using namespace Eigen;
 
-template<class Func>
+template <class Func>
 class DifferentialEvolution {
  public:
-     int trialCount;
-
     DifferentialEvolution(const Func &func, double CR = 0.5,
                           double scaling = 0.6)
         : func(func), CR(CR), scaling(scaling), trialCount(0) {}
@@ -41,18 +39,20 @@ class DifferentialEvolution {
             trial(population, distInt, dist);
         }
 
-        cout << trialCount << endl;
         return population;
     }
 
     void setSeed(int seed) { rand.seed(seed); }
 
+    int getTrialCount() const { return trialCount; }
+
  private:
     void trial(MatrixXd &population, uniform_int_distribution<> &distInt,
                uniform_real_distribution<> &dist) {
-
         trialCount++;
         MatrixXd prevPopulation = population;
+
+#pragma omp parallel for
         for (int i = 0; i < population.rows(); i++) {
             const auto &x = prevPopulation.row(i);
             auto pos = selectRandomly(i, population.rows());
@@ -60,9 +60,9 @@ class DifferentialEvolution {
             VectorXd new_x = VectorXd(population.cols());
 
             // Mutation
-            VectorXd v =
-                prevPopulation.row(pos[0]) +
-                scaling * (prevPopulation.row(pos[1]) - prevPopulation.row(pos[2]));
+            VectorXd v = prevPopulation.row(pos[0]) +
+                         scaling * (prevPopulation.row(pos[1]) -
+                                    prevPopulation.row(pos[2]));
 
             // Crossover
             for (int k = 0; k < population.cols(); k++) {
@@ -76,7 +76,7 @@ class DifferentialEvolution {
 
             // Selection
             auto newScore = func(new_x);
-            if(newScore < bestScore[i]) {
+            if (newScore < bestScore[i]) {
                 population.row(i) = new_x;
                 bestScore[i] = newScore;
             }
@@ -88,7 +88,7 @@ class DifferentialEvolution {
         distInt = uniform_int_distribution<>(0, population.cols() - 1);
         dist = uniform_real_distribution<>(0, 1.0);
         for (int i = 0; i < m; i++) {
-           bestScore.push_back(func(population.row(i)));
+            bestScore.push_back(func(population.row(i)));
         }
     }
 
@@ -122,6 +122,8 @@ class DifferentialEvolution {
     double CR;
     double scaling;
 
+    int trialCount;
+
     mt19937 rand;
 
     // 解集団
@@ -134,7 +136,7 @@ class DifferentialEvolution {
     vector<double> bestScore;
 };
 
-int main(int argc,char *argv[]) {
+int main(int argc, char *argv[]) {
     if (argc != 3) {
         fprintf(stderr, "点の数 次数\n");
         return 1;
@@ -160,4 +162,3 @@ int main(int argc,char *argv[]) {
         printf("%f %f %f\n", x(i), y(i), pa.eval(w)(i));
     }
 }
-
