@@ -3,6 +3,8 @@
 #include <array>
 #include <functional>
 #include <chrono>
+#include <vector>
+#include <atomic>
 
 #include "Eigen/Core"
 #include "polynomial_approximate.hpp"
@@ -13,10 +15,11 @@ using namespace Eigen;
 template<class Func>
 class DifferentialEvolution {
  public:
+     int trialCount;
 
     DifferentialEvolution(const Func &func, double CR = 0.5,
                           double scaling = 0.6)
-        : func(func), CR(CR), scaling(scaling) {}
+        : func(func), CR(CR), scaling(scaling), trialCount(0) {}
 
     // 変数の数，解集団の数
     MatrixXd run(int iteration, int n, int m) {
@@ -38,6 +41,7 @@ class DifferentialEvolution {
             trial(population, distInt, dist);
         }
 
+        cout << trialCount << endl;
         return population;
     }
 
@@ -46,16 +50,19 @@ class DifferentialEvolution {
  private:
     void trial(MatrixXd &population, uniform_int_distribution<> &distInt,
                uniform_real_distribution<> &dist) {
+
+        trialCount++;
+        MatrixXd prevPopulation = population;
         for (int i = 0; i < population.rows(); i++) {
-            const auto &x = population.row(i);
+            const auto &x = prevPopulation.row(i);
             auto pos = selectRandomly(i, population.rows());
             int j = distInt(rand);
             VectorXd new_x = VectorXd(population.cols());
 
             // Mutation
             VectorXd v =
-                population.row(pos[0]) +
-                scaling * (population.row(pos[1]) - population.row(pos[2]));
+                prevPopulation.row(pos[0]) +
+                scaling * (prevPopulation.row(pos[1]) - prevPopulation.row(pos[2]));
 
             // Crossover
             for (int k = 0; k < population.cols(); k++) {
@@ -68,8 +75,10 @@ class DifferentialEvolution {
             }
 
             // Selection
-            if (func(new_x) < func(x)) {
+            auto newScore = func(new_x);
+            if(newScore < bestScore[i]) {
                 population.row(i) = new_x;
+                bestScore[i] = newScore;
             }
         }
     }
@@ -78,6 +87,9 @@ class DifferentialEvolution {
         population = randomMatrix(-1.0, 1.0, m, n);
         distInt = uniform_int_distribution<>(0, population.cols() - 1);
         dist = uniform_real_distribution<>(0, 1.0);
+        for (int i = 0; i < m; i++) {
+           bestScore.push_back(func(population.row(i)));
+        }
     }
 
     array<int, 3> selectRandomly(int i, int n) {
@@ -117,6 +129,9 @@ class DifferentialEvolution {
     // 一様乱数生成
     uniform_int_distribution<> distInt;
     uniform_real_distribution<> dist;
+
+    // 各解ごとに一番良いものを覚えておく
+    vector<double> bestScore;
 };
 
 int main(int argc,char *argv[]) {
